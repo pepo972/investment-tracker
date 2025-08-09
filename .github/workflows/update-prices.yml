@@ -1,0 +1,36 @@
+name: Update Prices (daily)
+
+on:
+  schedule:
+    # Runs at 06:30 UTC daily (07:30 London during BST). Adjust as you like.
+    - cron: "30 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-and-cache:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: price-refresh
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run price fetcher
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/fetch_prices.cjs
